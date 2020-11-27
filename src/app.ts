@@ -1,3 +1,35 @@
+interface Validatable {
+    value: string | number,
+    required?: boolean,
+    minLength?: number,
+    maxLength?: number,
+    min?: number,
+    max?: number,
+}
+
+const validate = (validatableInput: Validatable) => {
+    let isValid = true
+    const inputLength = validatableInput.value.toString().trim().length
+    const isNumber = typeof validatableInput.value === 'number'
+
+    if (validatableInput.required)
+        isValid = isValid && inputLength !== 0
+
+    if (validatableInput.minLength != null)
+        isValid = isValid && inputLength > validatableInput.minLength
+
+    if (validatableInput.maxLength != null)
+        isValid = isValid && inputLength < validatableInput.maxLength
+
+    if (validatableInput.min != null && isNumber)
+        isValid = isValid && inputLength > validatableInput.min
+
+    if (validatableInput.max != null && isNumber)
+        isValid = isValid && inputLength < validatableInput.max
+
+    return isValid
+}
+
 const AutoBind = (_: any, _2: string, descriptor: PropertyDescriptor) => {
     const originalMethod = descriptor.value
     const adjDescriptor: PropertyDescriptor = {
@@ -39,9 +71,26 @@ class ProjectInput {
         const description = this.descriptionInputElement.value
         const people = this.peopleInputElement.value
 
-        const isEmpty = (input: string) => input.trim().length === 0
+        const titleValidatable: Validatable = {
+            value: title,
+            required: true
+        }
+        const descriptionValidatable: Validatable = {
+            value: description,
+            required: true,
+            minLength: 5
+        }
+        const peopleValidatable: Validatable = {
+            value: people,
+            required: true,
+            min: 1,
+            max: 5
+        }
+        const isFormValid = !validate(titleValidatable) ||
+            !validate(descriptionValidatable) ||
+            !validate(peopleValidatable)
 
-        if (isEmpty(title) || isEmpty(description) || isEmpty(people)) {
+        if (isFormValid) {
             alert('Invalid input')
             return
         }
