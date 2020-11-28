@@ -132,6 +132,28 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     abstract renderContent (): void
 }
 
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
+    private project: Project
+
+    constructor (hostId: string, project: Project) {
+        super('single-project', hostId, 'beforeend', project.id)
+        this.project = project
+
+        this.renderContent()
+    }
+
+    configure () {}
+
+    renderContent () {
+        const setContent = (selector: string, content: string) =>
+            this.element.querySelector(selector)!.textContent = content
+
+        setContent('h2', this.project.title)
+        setContent('h3', this.project.people.toString())
+        setContent('p', this.project.description)
+    }
+}
+
 class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     assignedProjects: Project[] = []
 
@@ -163,11 +185,9 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
         const listEl = document.getElementById(listId)! as HTMLUListElement
         listEl.innerHTML = '' // we get rid of all list items and rerender
 
-        for (const projectItem of this.assignedProjects) {
-            const listItem = document.createElement('li')
-            listItem.textContent = projectItem.title
-            listEl.appendChild(listItem)
-        }
+        const ulId = this.element.querySelector('ul')!.id
+        for (const projectItem of this.assignedProjects)
+            new ProjectItem(ulId, projectItem)
     }
 }
 
