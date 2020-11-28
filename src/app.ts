@@ -110,7 +110,10 @@ class ProjectList {
         this.element.id = `${this.type}-projects`
 
         projectState.addListener((projects: Project[]) => {
-            this.assignedProjects = projects
+            const projectsFilter = (project: Project) => this.type === 'active'
+                ? project.status === ProjectStatus.Active
+                : project.status === ProjectStatus.Finished
+            this.assignedProjects = projects.filter(projectsFilter)
             this.renderProjects()
         })
 
@@ -121,6 +124,7 @@ class ProjectList {
     private renderProjects () {
         const listId = `${this.type}-projects-list`
         const listEl = document.getElementById(listId)! as HTMLUListElement
+        listEl.innerHTML = '' // we get rid of all list items and rerender
 
         for (const projectItem of this.assignedProjects) {
             const listItem = document.createElement('li')
