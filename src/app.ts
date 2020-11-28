@@ -135,6 +135,11 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
     private project: Project
 
+    get persons () {
+        return this.project.people === 1
+            ? 'One person' : `${this.project.people} persons`
+    }
+
     constructor (hostId: string, project: Project) {
         super('single-project', hostId, 'beforeend', project.id)
         this.project = project
@@ -149,7 +154,7 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
             this.element.querySelector(selector)!.textContent = content
 
         setContent('h2', this.project.title)
-        setContent('h3', this.project.people.toString())
+        setContent('h3', this.persons)
         setContent('p', this.project.description)
     }
 }
