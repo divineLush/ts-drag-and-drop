@@ -1,3 +1,14 @@
+interface Draggable {
+    dragStartHandler (event: DragEvent): void
+    dragEndHandler (event: DragEvent): void
+}
+
+interface DragTarget {
+    dragOverHandler (event: DragEvent): void
+    dropHandler (event: DragEvent): void
+    dragLeaveHandler (event: DragEvent): void
+}
+
 enum ProjectStatus {
     Active,
     Finished
@@ -48,7 +59,21 @@ class ProjectState extends State<Project> {
             ProjectStatus.Active
         )
         this.projects.push(newProject)
+        this.updateListeners()
+    }
 
+    moveProject (projectId: string, newStatus: ProjectStatus) {
+        const project = this.projects
+            .find(project => project.id === projectId)
+
+        // rerender only if necessary
+        if (project && project.status !== newStatus) {
+            project.status = newStatus
+            this.updateListeners()
+        }
+    }
+
+    private updateListeners () {
         for (const listenerFn of this.listeners)
             listenerFn([...this.projects])
     }
@@ -132,7 +157,7 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
     abstract renderContent (): void
 }
 
-class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements Draggable {
     private project: Project
 
     get persons () {
@@ -144,10 +169,25 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
         super('single-project', hostId, 'beforeend', project.id)
         this.project = project
 
+        this.configure()
         this.renderContent()
     }
 
-    configure () {}
+    @AutoBind
+    dragStartHandler (event: DragEvent) {
+        event.dataTransfer!.setData('text/plain', this.project.id)
+        event.dataTransfer!.effectAllowed = 'move'
+    }
+
+    @AutoBind
+    dragEndHandler (event: DragEvent) {
+        console.log(event)
+    }
+
+    configure () {
+        this.element.addEventListener('dragstart', this.dragStartHandler)
+        this.element.addEventListener('dragend', this.dragEndHandler)
+    }
 
     renderContent () {
         const setContent = (selector: string, content: string) =>
@@ -159,7 +199,7 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> {
     }
 }
 
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+class ProjectList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
     assignedProjects: Project[] = []
 
     constructor (private type: 'active' | 'finished') {
@@ -169,7 +209,44 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
         this.renderContent()
     }
 
+    switchElementStyles (enable: boolean) {
+        const classList = this.element.querySelector('ul')!.classList
+        if (enable)
+            classList.add('droppable')
+        else
+            classList.remove('droppable')
+    }
+
+    @AutoBind
+    dragOverHandler (event: DragEvent) {
+        const isPlainText = event.dataTransfer &&
+            event.dataTransfer.types[0] === 'text/plain'
+        if (isPlainText) {
+            event.preventDefault() // i want dropHandler to fire
+            this.switchElementStyles(true)
+        }
+    }
+
+    @AutoBind
+    dropHandler (event: DragEvent) {
+        const projectId = event.dataTransfer!.getData('text/plain')
+        const projectStatus = this.type === 'active'
+            ? ProjectStatus.Active : ProjectStatus.Finished
+
+        projectState.moveProject(projectId, projectStatus)
+    }
+
+    @AutoBind
+    dragLeaveHandler (event: DragEvent) {
+        console.log(event)
+        this.switchElementStyles(false)
+    }
+
     configure () {
+        this.element.addEventListener('dragover', this.dragOverHandler)
+        this.element.addEventListener('dragleave', this.dragLeaveHandler)
+        this.element.addEventListener('drop', this.dropHandler)
+
         projectState.addListener((projects: Project[]) => {
             const projectsFilter = (project: Project) => this.type === 'active'
                 ? project.status === ProjectStatus.Active
